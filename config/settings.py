@@ -63,7 +63,7 @@ AGENT_CONFIG = {
 # Streamlit Configuration
 STREAMLIT_CONFIG = {
     "page_title": "Deep Research Agent",
-    "page_icon": "🔬",
+    "page_icon": "",
     "layout": "wide",
     "max_file_uploads": 10
 }

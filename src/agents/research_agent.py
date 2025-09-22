@@ -296,6 +296,92 @@ You have access to a comprehensive vector database of documents for information 
                 "timestamp": datetime.now().isoformat()
             }
     
+    async def analyze_documents(self, query: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze retrieved documents to extract relevant information for the query.
+        
+        Args:
+            query: Research question to analyze documents for
+            context: Additional context information
+            
+        Returns:
+            Dictionary with analysis results
+        """
+        try:
+            logger.info(f"Analyzing documents for query: {query[:100]}...")
+            
+            # Get retrieved documents
+            if not self.retrieved_documents:
+                # If no documents retrieved yet, retrieve them first
+                retrieval_result = await self.retrieve_documents(query, context)
+                if not retrieval_result.get("success"):
+                    return retrieval_result
+                
+                # Store retrieved documents
+                documents = retrieval_result.get("documents", [])
+                for doc_info in documents:
+                    from langchain_core.documents import Document
+                    doc = Document(
+                        page_content=doc_info["content"],
+                        metadata=doc_info["metadata"]
+                    )
+                    self.retrieved_documents.append((doc, doc_info["relevance_score"]))
+            
+            # Extract document content for analysis
+            document_texts = []
+            document_sources = []
+            
+            for doc, score in self.retrieved_documents[:10]:  # Analyze top 10 documents
+                document_texts.append(doc.page_content[:1000])  # Limit content length
+                document_sources.append(doc.metadata.get("filename", "unknown"))
+            
+            # Create analysis prompt
+            analysis_prompt = f"""
+Analyze the following documents to answer the research question: {query}
+
+RESEARCH QUESTION: {query}
+
+DOCUMENTS TO ANALYZE:
+{chr(10).join([f"Document {i+1} (Source: {source}):{chr(10)}{text}{chr(10)}" for i, (text, source) in enumerate(zip(document_texts, document_sources))])}
+
+Please provide a comprehensive analysis that:
+1. Identifies key information relevant to the research question
+2. Extracts important facts, data, and insights
+3. Notes any conflicting information or perspectives
+4. Highlights gaps or missing information
+5. Summarizes the main themes and findings
+
+Structure your analysis clearly and cite specific documents when making claims.
+"""
+            
+            # Generate analysis
+            analysis_response = await self.generate_response(analysis_prompt, include_history=False)
+            
+            # Store analysis in history
+            analysis_entry = {
+                "query": query,
+                "analysis": analysis_response,
+                "documents_analyzed": len(document_texts),
+                "timestamp": datetime.now().isoformat()
+            }
+            self.analysis_history.append(analysis_entry)
+            
+            return {
+                "success": True,
+                "analysis": analysis_response,
+                "documents_analyzed": len(document_texts),
+                "sources": document_sources,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Document analysis failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
     async def _generate_query_variations(self, original_query: str) -> List[str]:
         """Generate variations of the query for broader retrieval coverage."""
         try:

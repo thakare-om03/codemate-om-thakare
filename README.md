@@ -1,4 +1,4 @@
-# Deep Research Agent 🔬
+# Deep Research Agent
 
 A comprehensive local research system built with the LangChain ecosystem, ChromaDB vector database, and Ollama for advanced local AI models. This system provides deep research capabilities without relying on external APIs.
 
@@ -25,7 +25,7 @@ A comprehensive local research system built with the LangChain ecosystem, Chroma
 
 ### Agent Architecture
 
-# Deep Research Agent 🔬
+# Deep Research Agent
 
 A local research system using Ollama models, ChromaDB, and a multi-agent design. This README reflects the current repository layout and entrypoint.
 

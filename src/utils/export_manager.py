@@ -88,7 +88,7 @@ class ExportManager:
             markdown_content = []
             
             # Header
-            markdown_content.append("# 🔬 Deep Research Agent - Chat Session")
+            markdown_content.append("#   Deep Research Agent - Chat Session")
             markdown_content.append("")
             
             # Metadata
@@ -149,7 +149,20 @@ class ExportManager:
                 markdown_content.append("")
                 
                 # Message content
-                markdown_content.append(content)
+                # Clean content for markdown (remove HTML tags)
+                import re
+                from html import unescape
+                
+                cleaned_content = content
+                try:
+                    # Remove HTML tags and unescape HTML entities
+                    cleaned_content = re.sub(r'<[^>]+>', '', content)
+                    cleaned_content = unescape(cleaned_content)
+                except Exception as clean_error:
+                    logger.warning(f"Content cleaning for markdown failed: {clean_error}")
+                    cleaned_content = str(content)
+                
+                markdown_content.append(cleaned_content)
                 markdown_content.append("")
                 
                 # Metadata for assistant messages
@@ -235,7 +248,7 @@ class ExportManager:
             story = []
             
             # Title
-            title = Paragraph("🔬 Deep Research Agent - Chat Session", self.styles['Title'])
+            title = Paragraph("  Deep Research Agent - Chat Session", self.styles['Title'])
             story.append(title)
             story.append(Spacer(1, 12))
             
@@ -309,8 +322,16 @@ class ExportManager:
                 
                 # Message content
                 # Clean and format content for PDF
-                cleaned_content = self._clean_content_for_pdf(content)
-                story.append(Paragraph(cleaned_content, style))
+                try:
+                    cleaned_content = self._clean_content_for_pdf(content)
+                    story.append(Paragraph(cleaned_content, style))
+                except Exception as content_error:
+                    logger.error(f"Error processing message content for PDF: {content_error}")
+                    # Fallback to plain text
+                    plain_content = str(content).replace('<', '&lt;').replace('>', '&gt;').replace('&', '&amp;')
+                    if len(plain_content) > 1000:
+                        plain_content = plain_content[:1000] + "... (content simplified due to formatting error)"
+                    story.append(Paragraph(plain_content, style))
                 story.append(Spacer(1, 6))
                 
                 # Metadata for assistant messages
@@ -342,7 +363,36 @@ class ExportManager:
                 story.append(Spacer(1, 18))
             
             # Build PDF
-            doc.build(story)
+            try:
+                doc.build(story)
+            except Exception as build_error:
+                logger.error(f"PDF build failed: {build_error}")
+                # Try with simplified content
+                simplified_story = []
+                simplified_story.append(Paragraph("Deep Research Agent - Chat Session", self.styles['Title']))
+                simplified_story.append(Spacer(1, 12))
+                simplified_story.append(Paragraph(f"Session ID: {session_id}", self.styles['Normal']))
+                simplified_story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", self.styles['Normal']))
+                simplified_story.append(Paragraph(f"Total Messages: {len(chat_history)}", self.styles['Normal']))
+                simplified_story.append(Spacer(1, 12))
+                simplified_story.append(Paragraph("Chat History", self.styles['Heading2']))
+                simplified_story.append(Spacer(1, 12))
+                
+                for i, message in enumerate(chat_history, 1):
+                    role = message.get('role', 'unknown')
+                    content = message.get('content', '')
+                    
+                    # Simple plain text version
+                    plain_content = str(content).replace('<', '').replace('>', '').replace('&', '')
+                    if len(plain_content) > 500:
+                        plain_content = plain_content[:500] + "... (truncated)"
+                    
+                    header = f"Message {i} ({role})"
+                    simplified_story.append(Paragraph(header, self.styles['Heading3']))
+                    simplified_story.append(Paragraph(plain_content, self.styles['Normal']))
+                    simplified_story.append(Spacer(1, 12))
+                
+                doc.build(simplified_story)
             
             # Save to file if path provided
             if output_path:
@@ -361,23 +411,90 @@ class ExportManager:
     def _clean_content_for_pdf(self, content: str) -> str:
         """Clean content for PDF rendering."""
         try:
-            # Replace problematic characters
+            import re
+            from html import unescape
+            
+            # First, strip any existing HTML tags completely to avoid malformed XML
+            # This removes all HTML tags and leaves just the text content
+            content = re.sub(r'<[^>]+>', '', content)
+            
+            # Unescape any HTML entities that might remain
+            content = unescape(content)
+            
+            # Now escape characters that would break XML
             content = content.replace('&', '&amp;')
             content = content.replace('<', '&lt;')
             content = content.replace('>', '&gt;')
             
-            # Handle markdown-like formatting
-            content = content.replace('**', '<b>')
-            content = content.replace('__', '<i>')
+            # Handle markdown-like formatting with proper opening and closing tags
+            # Replace **text** with <b>text</b> (non-greedy)
+            content = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', content, flags=re.DOTALL)
             
-            # Simple line breaks
+            # Replace __text__ with <i>text</i> (non-greedy)
+            content = re.sub(r'__(.*?)__', r'<i>\1</i>', content, flags=re.DOTALL)
+            
+            # Replace *text* with <i>text</i> (non-greedy, but avoid double conversion)
+            content = re.sub(r'(?<!\*)\*([^*]+?)\*(?!\*)', r'<i>\1</i>', content)
+            
+            # Handle line breaks - convert multiple newlines to paragraph breaks
+            content = re.sub(r'\n\s*\n', '<br/><br/>', content)
             content = content.replace('\n', '<br/>')
+            
+            # Clean up any malformed or nested tags that might have been created
+            # Remove empty tags
+            content = re.sub(r'<b>\s*</b>', '', content)
+            content = re.sub(r'<i>\s*</i>', '', content)
+            
+            # Fix nested tags by flattening them
+            content = re.sub(r'<b>([^<]*)<b>', r'<b>\1', content)  # Remove nested bold opening
+            content = re.sub(r'</b>([^>]*)</b>', r'\1</b>', content)  # Remove nested bold closing
+            content = re.sub(r'<i>([^<]*)<i>', r'<i>\1', content)  # Remove nested italic opening
+            content = re.sub(r'</i>([^>]*)</i>', r'\1</i>', content)  # Remove nested italic closing
+            
+            # Ensure all bold tags are properly closed
+            open_bold = content.count('<b>') - content.count('</b>')
+            if open_bold > 0:
+                content += '</b>' * open_bold
+            elif open_bold < 0:
+                # Remove excess closing tags
+                for _ in range(abs(open_bold)):
+                    content = content.replace('</b>', '', 1)
+            
+            # Ensure all italic tags are properly closed
+            open_italic = content.count('<i>') - content.count('</i>')
+            if open_italic > 0:
+                content += '</i>' * open_italic
+            elif open_italic < 0:
+                # Remove excess closing tags
+                for _ in range(abs(open_italic)):
+                    content = content.replace('</i>', '', 1)
+            
+            # Final cleanup - remove any remaining malformed patterns
+            content = re.sub(r'<b>(?!.*?</b>).*?$', lambda m: m.group(0).replace('<b>', ''), content)
+            content = re.sub(r'<i>(?!.*?</i>).*?$', lambda m: m.group(0).replace('<i>', ''), content)
+            
+            # Limit content length to prevent ReportLab issues
+            if len(content) > 8000:
+                content = content[:8000] + "... (content truncated for PDF export)"
             
             return content
             
         except Exception as e:
             logger.error(f"Content cleaning failed: {e}")
-            return str(content)
+            # Return a safe, plain text version as fallback
+            try:
+                import re
+                safe_content = str(content)
+                # Strip all HTML/XML tags
+                safe_content = re.sub(r'<[^>]+>', '', safe_content)
+                # Escape remaining special characters
+                safe_content = safe_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                # Limit length
+                if len(safe_content) > 2000:
+                    safe_content = safe_content[:2000] + "... (content simplified for PDF export)"
+                return safe_content
+            except:
+                return "Content could not be processed for PDF export."
     
     def export_research_summary(
         self,

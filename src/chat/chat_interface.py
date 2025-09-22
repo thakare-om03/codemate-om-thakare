@@ -38,8 +38,8 @@ class ChatInterface:
     def setup_page_config(self):
         """Configure Streamlit page settings."""
         st.set_page_config(
-            page_title="Deep Research Agent 🔬",
-            page_icon="🔬",
+            page_title="Deep Research Agent  ",
+            page_icon=" ",
             layout="wide",
             initial_sidebar_state="expanded",
             menu_items={
@@ -530,7 +530,7 @@ class ChatInterface:
         """Run the Streamlit interface."""
         try:
             # Main title
-            st.title("🔬 Deep Research Agent")
+            st.title("  Deep Research Agent")
             st.markdown("*Local AI-powered research assistant with multi-step reasoning*")
             
             # Check system status
