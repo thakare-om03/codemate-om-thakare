@@ -1,42 +1,45 @@
-# Core LangChain and LangGraph
-langchain>=0.3.0
+# Core LangChain ecosystem - Latest compatible versions for deep research
+langchain==0.3.12
+langchain-community==0.3.12
 langchain-ollama>=0.2.0
-langchain-chroma>=0.1.4
-langgraph>=0.2.0
-langchain-core>=0.3.0
+langchain-chroma>=0.1.0
 
-# Vector Database and Embeddings
-chromadb>=0.5.10,<0.6.0
+# Vector database and embeddings - Optimized for local processing (compatible versions)
+chromadb==0.5.18
+sentence-transformers==3.0.1
 
-# Document Processing
-pandas>=2.0.0
-pypdf>=4.0.0
-python-docx>=1.1.0
-beautifulsoup4>=4.12.0
-markdown>=3.6.0
-pydantic>=2.0.0
+# Document processing - Multi-format support
+PyPDF2==3.0.1
+python-docx==1.1.0
+pymupdf==1.23.14  
+pypdf==5.9.0
 
-# Text Processing and NLP
-nltk>=3.8.0
-spacy>=3.7.0
-sentence-transformers>=2.7.0
+# Web interface and enhanced UI components
+streamlit==1.42.0
+streamlit-option-menu==0.4.0
 
-# File Handling and Utilities
-python-multipart>=0.0.6
-aiofiles>=23.2.0
-pyyaml>=6.0.0
+# Progress tracking and visualization for reasoning display  
+stqdm==0.0.5
+plotly==5.17.0
 
-# Report Generation
-reportlab>=4.0.0
-fpdf2>=2.7.0
+# Export functionality - Professional PDF generation
+reportlab==4.0.7
+markdown==3.5.1
 
-# Evaluation and Monitoring
-ragas>=0.1.0
+# Data handling and core utilities (compatible versions)
+pandas==2.2.2
+numpy>=1.22.4,<2.0.0
+python-dotenv==1.0.1
+pydantic>=2.11.0,<3.0.0
+typing-extensions==4.12.2
 
-# Async and Performance
-httpx>=0.27.0
+# HTTP client for Ollama API communication (updated version)
+httpx>=0.27.1
+ollama==0.3.3
 
-# Development and Testing
-python-dotenv>=1.0.0
-streamlit>=1.28.0
-plotly>=5.15.0
+# Logging and debugging
+loguru==0.7.2
+
+# Development tools (optional - remove if conflicts)
+black==24.8.0
+isort==5.13.2
